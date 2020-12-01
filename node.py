@@ -1,26 +1,16 @@
 # %%
-from address import Address
-from utils import *
+from client import Client
+from conf import *
+from hash import *
 
-def get_hash(key):
-  '''
-  Convert key string to a 10-bit integer by using SHA-1 hashing
-  '''
-  # result=hashlib.sha1(key.encode())
-  # return int(result.hexdigest(), 16)
-  for i in range(len(keyList)):
-    if key==keyList[i]:
-      return i
-  keyList.append(key)
-  return len(keyList)-1
 
 def keyInrange(key, a, b):
   '''
   is key in [a, b)?
   '''
-  a=a%SIZE
-  b=b%SIZE
-  key=key%SIZE
+  a=a%CHORD_SIZE
+  b=b%CHORD_SIZE
+  key=key%CHORD_SIZE
   if a<b:
     return a<=key and key<b
   else:
@@ -54,20 +44,16 @@ def retry_on_socket_error(retry_limit):
     return inner
   return decorator
 
-def get_hash(address):
-  ip, port=address[0], address[1]
-  return hash(("%s:%s" %(ip, port)).encode())%CHORD_SIZE
-
 
 # %%
 import json
-keyList=[]
-
 import socket, threading
+
 class NodeServer:
   def __init__(self, ip, port):
     self.addr=(ip, port)
-    self.next=0
+    self.succList=[]
+    # self.next=0
     
     # try:
     #   self.server_socket=socket.socket(socket.AF_INET, socket,SOCK_STREAM)
@@ -103,14 +89,14 @@ class NodeServer:
   def id(self):
     return get_hash(self.addr)
 
-  def join(self, n_):
+  def join(self, rNodeAddr):
     '''
     join a chord ring containing node n_
     '''
     self.finger=list(map(lambda x: None, range(LOGSIZE)))
     self.pred=None
-    if n_:  # join a chord ring containing node n_
-      client=Client(n_.addr)
+    if rNodeAddr:  # join a chord ring containing node n_
+      client=Client(rNodeAddr)
       self.finger[0]=client.find_successor(self.id())   #return the client connecting to succ
     else:   # create a new chord ring
       self.finger[0]=self
@@ -144,8 +130,8 @@ class NodeServer:
         return n_
     return self
 
-  @repeat_and_sleep(STABILIZE_INT)
-  @retry_on_socket_error(STABILIZE_RET)
+  # @repeat_and_sleep(STABILIZE_INT)
+  # @retry_on_socket_error(STABILIZE_RET)
   def stabilize(self):
     '''
     Periodically verify n's immediate successor,and tell the successor about n.
@@ -174,7 +160,7 @@ class NodeServer:
     if self.pred==None or keyInrange(n_.id(), self.pred.id()+1, self.id()+1):
       self.pred=n_
 
-  @repeat_and_sleep(FIX_FINGERS_INT)
+  # @repeat_and_sleep(FIX_FINGERS_INT)
   def fix_fingers(self):
     '''
     periodically refresh finger table entries
@@ -191,9 +177,11 @@ class NodeServer:
     update n' succList with succ and succ's successor list
     '''
     succ=self.successor()
-    if succ.id!=self.id():
-      succ_list=succ.get_succList()
-      self.succList=[succ]+succ_list
+    succList=[succ]
+    # if we are not alone in the ring
+    if succ.id()!=self.id():
+      succList+=succ.get_succList()
+    self.succList=succList
 
   def successor(self):
     '''
@@ -231,7 +219,7 @@ class NodeServer:
 
       # request=read_from_socket(conn)
       request=conn.recv(256).decode('utf-8')
-      command=request.split()[0]
+      command=request.split(" ")[0]
       request=request[len(command):]
 
       if command=='get_successor':
