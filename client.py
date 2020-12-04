@@ -44,10 +44,9 @@ class Client:
   def predecessor(self):
     self.open_connection()
     self.send('get_predecessor')
-    response=self.recv()
+    response=json.loads(self.recv())
     if response=="":
       return None
-    response=json.loads(response)
     self.close_connection()
     return Client(response)
 
@@ -56,6 +55,7 @@ class Client:
     self.send('find_successor %s' %keyId)
     response=json.loads(self.recv())
     self.close_connection()
+    print("find_successor finished")
     return Client(response)
 
   def closet_preceding_finger(self, keyId):
@@ -67,7 +67,7 @@ class Client:
 
   def notify(self, n_):
     self.open_connection()
-    self.send('notify %s %s' %(n_.addr[0], n_addr[1]))
+    self.send('notify %s %s' %(n_.addr[0], n_.addr[1]))
     self.close_connection()
 
   def get_succList(self):

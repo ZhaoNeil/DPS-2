@@ -22,6 +22,8 @@ def repeat_and_sleep(sleep_time):
     def inner(self, *args, **kwargs):
       while 1:
         time.sleep(sleep_time)
+        if self.shutdown_:
+          return
         ret=func(self, *args, **kwargs)
     return inner
   return decorator
@@ -33,13 +35,12 @@ def retry_on_socket_error(retry_limit):
       while retry_count<retry_limit:
         try:
           ret=func(self, *args, **kwargs)
-          return ret
         except socket.error:
           time.sleep(2**retry_count)
           retry_count+=1
       if retry_count==retry_limit:
         print("Retry count limit reached, aborting.. (%s)" % func.__name__)
-        self.shutdown=True
+        self.shutdown_=True
         sys.exit(-1)
     return inner
   return decorator
@@ -53,35 +54,74 @@ class NodeServer:
   def __init__(self, ip, port):
     self.addr=(ip, port)
     self.succList=[]
-    # self.next=0
-    
-    # try:
-    #   self.server_socket=socket.socket(socket.AF_INET, socket,SOCK_STREAM)
-    #   self.server_socket.bind((IP, PORT))
-    #   self.server_socket.listen()
-    # except socket.error:
-    #   print("Socket not opened")
+    self.shutdown_=False
+    self.next=0
 
-  # def listen_thread(self):
-  #   '''
-  #   store the ip and port in address and save the connection and threading
-  #   '''
-  #   while True:
-  #     try:
-  #       connection, address=self.server_socket.accept()
-  #       connection.settimeout(120)
-  #       threading.Thread(target=self.connection_thread, args=(connection, address))
-  #     except socket.error:
-  #       pass #print("Error: Connection not accepted. Try again.")
+  def listen_thread(self):
+    '''
+    listening socket for incoming connection and create a new thread for processing msgs.
+    '''
+    self.socket_=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    self.socket_.bind(self.addr)
+    self.socket_.listen()
 
-  # def start(self):
-  #   # accept connection from other threads
-  #   threading.Thread(target=self.listen_thread, args=()).start()
-  #   threading.Thread(target=self.ping_successor, args=()).start()
-  #   # In case of connecting to other clients
-  #   while True:
-  #     print("Listenning to other clients")
-  #     self.asAClientThread()
+    while True:
+      try:
+        conn, addr=self.socket_.accept()
+        conn.settimeout(60)
+        print("Connection from %s" %(str(addr)))
+        threading.Thread(target=self.connection_thread, args=(conn, addr)).start()
+      except socket.error:
+        self.shutdown_=True
+        break
+
+  def connection_thread(self, conn, addr):
+    '''
+    Processing msgs from the remote clients
+    '''
+    request=conn.recv(256).decode('utf-8')
+    command=request.split(" ")[0]
+    request=request[len(command):]
+
+    result=json.dumps("")
+    if command=='get_successor':
+      successor=self.successor()
+      result=json.dumps(successor.addr)
+    if command=='get_predecessor':
+      if self.predecessor()!=None:
+        predecessor=self.predecessor()
+        result=json.dumps(predecessor.addr)
+    if command=='find_successor':
+      successor=self.find_successor(int(request))
+      result=json.dumps(successor.addr)
+    if command=='closet_preceding_finger':
+      closet=self.closet_preceding_finger(int(request))
+      result=json.dumps(closet.addr)
+    if command=='notify':
+      ip, port=request.split()
+      npred_addr=(ip, int(port))
+      self.notify(Client(npred_addr))
+    if command=='get_succList':
+      succList=self.get_succList()
+      result=json.dumps(list(map(lambda n: n.addr, succList)))
+
+    conn.sendall(result.encode('utf-8'))
+    conn.close()
+
+    if command=='shutdown':
+      self.socket_.close()
+      self.shutdown_=True
+
+  def shutdown(self):
+    self.shutdown_=True
+    self.socket_.shutdown(socket.SHUT_RDWR)
+    self.socket_.close()
+
+  def start(self):
+    # accept connection from other threads
+    threading.Thread(target=self.listen_thread, args=()).start()
+    threading.Thread(target=self.stabilize, args=()).start()
+    threading.Thread(target=self.fix_fingers, args=()).start()
 
   def ping(self):
     return True
@@ -89,7 +129,7 @@ class NodeServer:
   def id(self):
     return get_hash(self.addr)
 
-  def join(self, rNodeAddr):
+  def join(self, rNodeAddr=None):
     '''
     join a chord ring containing node n_
     '''
@@ -145,8 +185,8 @@ class NodeServer:
     # fix finger if succ failed
     if succ.id()!=self.finger[0].id():
       self.finger[0]=succ
-    x=succ.precedessor()
-    if x and keyInrange(x.id(), self.id()+1, self.finger[0].id()+1) and x.ping():
+    x=succ.predecessor()
+    if x!=None and keyInrange(x.id(), self.id()+1, self.finger[0].id()+1) and x.ping():
       self.finger[0]=x
     self.successor().notify(self)
     self.update_successor_list()
@@ -167,7 +207,7 @@ class NodeServer:
     '''
     if self.next>=LOGSIZE:
       self.next=0
-    keyId=(self.id()+2**self.next)%(2**m)
+    keyId=(self.id()+2**self.next)%(2**LOGSIZE)
     self.finger[self.next]=self.find_successor(keyId)
     self.next+=1
   
@@ -196,7 +236,6 @@ class NodeServer:
   def predecessor(self):
     return self.pred
   
-
   def get_succList(self):
     return self.succList[:NSUCCESSORS-1]
 
@@ -204,57 +243,3 @@ class NodeServer:
   #   if self.predecessor failed:
   #     self.precedessor=nil
   
-  def connection_thread(self):
-    # listen to incomming connections
-    self.socket_=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    self.socket_.bind(self.addr)
-    self.socket_.listen()
-
-    while 1:
-      try:
-        conn, addr=self.socket_.accept()
-      except socket.error:
-        self.shutdown_=True
-        break
-
-      # request=read_from_socket(conn)
-      request=conn.recv(256).decode('utf-8')
-      command=request.split(" ")[0]
-      request=request[len(command):]
-
-      if command=='get_successor':
-        successor=self.successor()
-        result=json.dumps(successor.addr)
-      if command=='get_predecessor':
-        if self.pred!=None:
-          predecessor=self.pred
-          result=json.dumps(predecessor.addr)
-      if command=='find_successor':
-        successor=self.find_successor(int(request))
-        result=json.dumps(successor.addr)
-      if command=='closet_preceding_finger':
-        closet=self.closet_preceding_finger(int(request))
-        result=json.dumps(closet.addr)
-      if command=='notify':
-        ip, port=request.split()
-        npred_addr=(ip, int(port))
-        self.notify(Client(npred_addr))
-      if command=='get_succList':
-        succList=self.get_succList()
-        result=json.dumps(list(map(lambda n: n.addr, succList)))
-
-      conn.sendall(result.encode('utf-8'))
-      conn.close()
-
-      # if command=='shutdown':
-      #   self.socket_.close()
-      #   self.shutdown_=True
-      #   break
-
-  # def register_command(self, cmd, callback):
-  #   self.command_.append((cmd, callback))
-
-  # def unregister_command(self, cmd):
-  #   self.command_=filter(lambda t: True if t[0]!=cmd else False, self.command_)
-
-
