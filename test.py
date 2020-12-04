@@ -16,15 +16,15 @@ n2.join((ip,ports[0]))
 n3=NodeServer(ip,ports[3])
 n3.join((ip,ports[0]))
 # %%
-n1.stabilize
-n2.stabilize
-n3.stabilize
+n1.stabilize()
+n2.stabilize()
+n3.stabilize()
 # %%
-n1.fix_fingers
-n2.fix_fingers
-n3.fix_fingers
+n1.fix_fingers()
+n2.fix_fingers()
+n3.fix_fingers()
 # %%
-n1.update_successor_list
-n2.update_successor_list
-n3.update_successor_list
+n1.update_successor_list()
+n2.update_successor_list()
+n3.update_successor_list()
 # %%

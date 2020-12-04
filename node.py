@@ -56,6 +56,7 @@ class NodeServer:
     self.succList=[]
     self.shutdown_=False
     self.next=0
+    self.id = get_hash(self.addr)
 
   def listen_thread(self):
     '''
@@ -74,6 +75,7 @@ class NodeServer:
       except socket.error:
         self.shutdown_=True
         break
+    # return conn, addr
 
   def connection_thread(self, conn, addr):
     '''
@@ -126,8 +128,6 @@ class NodeServer:
   def ping(self):
     return True
 
-  def id(self):
-    return get_hash(self.addr)
 
   def join(self, rNodeAddr=None):
     '''
@@ -137,7 +137,7 @@ class NodeServer:
     self.pred=None
     if rNodeAddr:  # join a chord ring containing node n_
       client=Client(rNodeAddr)
-      self.finger[0]=client.find_successor(self.id())   #return the client connecting to succ
+      self.finger[0]=client.find_successor(self.id)   #return the client connecting to succ
     else:   # create a new chord ring
       self.finger[0]=self
     self.update_successor_list()
@@ -153,7 +153,7 @@ class NodeServer:
     '''
     if self.predecessor() and keyInrange(keyId, self.predecessor().id()+1, self.id()+1):
       return self
-    elif keyInrange(keyId, self.id()+1, self.successor().id()+1):
+    elif keyInrange(keyId, self.id+1, self.successor().id+1):
       return self.successor()
     else:
       n_=self.closet_preceding_finger(keyId)
@@ -166,7 +166,7 @@ class NodeServer:
     - n_ alive
     '''
     for n_ in reversed(self.succList+self.finger):
-      if n_!=None and keyInrange(n_.id(), self.id()+1, keyId) and n_.ping():
+      if n_!=None and keyInrange(n_.id, self.id+1, keyId) and n_.ping():
         return n_
     return self
 
@@ -183,10 +183,10 @@ class NodeServer:
     '''
     succ=self.successor()
     # fix finger if succ failed
-    if succ.id()!=self.finger[0].id():
+    if succ.id!=self.finger[0].id:
       self.finger[0]=succ
     x=succ.predecessor()
-    if x!=None and keyInrange(x.id(), self.id()+1, self.finger[0].id()+1) and x.ping():
+    if x!=None and keyInrange(x.id, self.id+1, self.finger[0].id+1) and x.ping():
       self.finger[0]=x
     self.successor().notify(self)
     self.update_successor_list()
@@ -197,7 +197,7 @@ class NodeServer:
     - we don't have a precedessor OR
     - n_ is in the range (pred(n), n]
     '''
-    if self.pred==None or keyInrange(n_.id(), self.pred.id()+1, self.id()+1):
+    if self.pred==None or keyInrange(n_.id, self.pred.id+1, self.id+1):
       self.pred=n_
 
   # @repeat_and_sleep(FIX_FINGERS_INT)
@@ -207,7 +207,7 @@ class NodeServer:
     '''
     if self.next>=LOGSIZE:
       self.next=0
-    keyId=(self.id()+2**self.next)%(2**LOGSIZE)
+    keyId=(self.id+2**self.next)%(2**LOGSIZE)
     self.finger[self.next]=self.find_successor(keyId)
     self.next+=1
   
@@ -219,7 +219,7 @@ class NodeServer:
     succ=self.successor()
     succList=[succ]
     # if we are not alone in the ring
-    if succ.id()!=self.id():
+    if succ.id != self.id:
       succList+=succ.get_succList()
     self.succList=succList
 
