@@ -49,7 +49,6 @@ def retry_on_socket_error(retry_limit):
     return inner
   return decorator
 
-
 # %%
 import json
 import socket, threading
@@ -248,4 +247,3 @@ class NodeServer:
   # def check_predecessor(self):
   #   if self.predecessor failed:
   #     self.precedessor=nil
-  
