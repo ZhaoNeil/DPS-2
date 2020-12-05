@@ -6,7 +6,8 @@ from hash import *
 
 # %%
 nodeList=['127.0.0.1']
-portList=random.randint(range(10001, 10010), nNodes)
+addrList = []
+portList=[random.randint(10001,10010) for x in range(len(nodeList))]
 for n in nodeList:
   addrList+=map(lambda port: (n, port), portList)
 
@@ -24,6 +25,8 @@ for i in range(0, len(addrList)):
     cNode.join(rNodeAddr)
 
   cNode.start()
-  print("Created at %s, id=%d" % (addrList[i], get_hash(addrList[i]))
+  print("Created at %s, id=%d" % (addrList[i], get_hash(addrList[i])))
   cNodeList.append(addrList[i])
   time.sleep(0.5)
+
+# %%
