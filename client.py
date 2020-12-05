@@ -2,10 +2,26 @@
 import socket
 import json
 from hash import *
+import threading
+
+def requires_connection(func):
+  '''
+  initialize and clean up connections with remote server
+  '''
+  def inner(self, *args, **kwargs):
+    self.mutex.acquire()  #acquire lock
+    self.open_connection()
+    ret=func(self, *args, **kwargs)
+    self.close_connection()
+    self.mutex.release()  #release lock
+    return ret
+  return inner
+
 
 class Client:
   def __init__(self, server_address):
     self.addr=tuple(server_address)
+    self.mutex=threading.Lock()
 
   def open_connection(self):
     self.socket_=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -34,51 +50,42 @@ class Client:
   def id(self):
     return get_hash(self.addr)
 
+  @requires_connection
   def successor(self):
-    self.open_connection()
     self.send('get_successor')
     response=json.loads(self.recv())
-    self.close_connection()
     return Client(response)
 
+  @requires_connection
   def predecessor(self):
-    self.open_connection()
     self.send('get_predecessor')
     response=json.loads(self.recv())
     if response=="":
       return None
-    self.close_connection()
     return Client(response)
 
+  @requires_connection
   def find_successor(self, keyId):
-    self.open_connection()
     self.send('find_successor %s' %keyId)
     response=json.loads(self.recv())
-    self.close_connection()
-    print("find_successor finished")
     return Client(response)
 
+  @requires_connection
   def closet_preceding_finger(self, keyId):
-    self.open_connection()
     self.send('closet_preceding_finger %s' %keyId)
     response=json.loads(self.recv())
-    self.close_connection()
     return Client(response)
 
+  @requires_connection
   def notify(self, n_):
-    self.open_connection()
     self.send('notify %s %s' %(n_.addr[0], n_.addr[1]))
-    self.close_connection()
 
+  @requires_connection
   def get_succList(self):
-    self.open_connection()
     self.send('get_succList')
-    response=self.recv()
-
+    response=json.loads(self.recv())
     if response=="":
       return []
-    response=json.loads(response)
-    self.close_connection()
-    return list(map(lambda addr: Client(addr), response))
+    return list(map(Client, response))
 
 # %%

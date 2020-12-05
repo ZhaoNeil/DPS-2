@@ -2,6 +2,7 @@
 from client import Client
 from conf import *
 from hash import *
+import sys
 
 
 def keyInrange(key, a, b):
@@ -23,6 +24,7 @@ def repeat_and_sleep(sleep_time):
       while 1:
         time.sleep(sleep_time)
         if self.shutdown_:
+          print('finished')
           return
         ret=func(self, *args, **kwargs)
     return inner
@@ -35,6 +37,8 @@ def retry_on_socket_error(retry_limit):
       while retry_count<retry_limit:
         try:
           ret=func(self, *args, **kwargs)
+          print('retry')
+          return 
         except socket.error:
           time.sleep(2**retry_count)
           retry_count+=1
@@ -56,7 +60,12 @@ class NodeServer:
     self.succList=[]
     self.shutdown_=False
     self.next=0
-    self.id = get_hash(self.addr)
+
+  def start(self):
+    # accept connection from other threads
+    threading.Thread(target=self.listen_thread, args=()).start()
+    threading.Thread(target=self.stabilize, args=()).start()
+    threading.Thread(target=self.fix_fingers, args=()).start()
 
   def listen_thread(self):
     '''
@@ -65,17 +74,15 @@ class NodeServer:
     self.socket_=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.socket_.bind(self.addr)
     self.socket_.listen()
-
     while True:
       try:
         conn, addr=self.socket_.accept()
-        conn.settimeout(60)
+        conn.settimeout(120)
         print("Connection from %s" %(str(addr)))
         threading.Thread(target=self.connection_thread, args=(conn, addr)).start()
       except socket.error:
         self.shutdown_=True
         break
-    return conn, addr
 
   def connection_thread(self, conn, addr):
     '''
@@ -83,8 +90,8 @@ class NodeServer:
     '''
     request=conn.recv(256).decode('utf-8')
     command=request.split(" ")[0]
-    request=request[len(command):]
-
+    request=request[len(command)+1:]
+  
     result=json.dumps("")
     if command=='get_successor':
       successor=self.successor()
@@ -100,8 +107,7 @@ class NodeServer:
       closet=self.closet_preceding_finger(int(request))
       result=json.dumps(closet.addr)
     if command=='notify':
-      ip, port=request.split()
-      npred_addr=(ip, int(port))
+      npred_addr=(request.split(" ")[0], int(request.split(" ")[1]))
       self.notify(Client(npred_addr))
     if command=='get_succList':
       succList=self.get_succList()
@@ -119,15 +125,11 @@ class NodeServer:
     self.socket_.shutdown(socket.SHUT_RDWR)
     self.socket_.close()
 
-  def start(self):
-    # accept connection from other threads
-    threading.Thread(target=self.listen_thread, args=()).start()
-    threading.Thread(target=self.stabilize, args=()).start()
-    threading.Thread(target=self.fix_fingers, args=()).start()
-
   def ping(self):
     return True
 
+  def id(self):
+    return get_hash(self.addr)
 
   def join(self, rNodeAddr=None):
     '''
@@ -137,11 +139,12 @@ class NodeServer:
     self.pred=None
     if rNodeAddr:  # join a chord ring containing node n_
       client=Client(rNodeAddr)
-      self.finger[0]=client.find_successor(self.id)   #return the client connecting to succ
+      self.finger[0]=client.find_successor(self.id())   #return the client connecting to succ
     else:   # create a new chord ring
       self.finger[0]=self
     self.update_successor_list()
 
+  # @retry_on_socket_error(FIND_SUCCESSOR_RET)
   def find_successor(self, keyId):
     '''
     ask node n to find keyid's successor
@@ -151,13 +154,13 @@ class NodeServer:
     2. the succ is succ(n) iff:
       - keyid is in (n, succ(n)]
     '''
-    if self.predecessor() and keyInrange(keyId, self.predecessor().id+1, self.id+1):
+    if self.predecessor() and keyInrange(keyId, self.predecessor().id()+1, self.id()+1):
       return self
-    elif keyInrange(keyId, self.id+1, self.successor().id+1):
+    elif keyInrange(keyId, self.id()+1, self.successor().id()+1):
       return self.successor()
     else:
       n_=self.closet_preceding_finger(keyId)
-      return n_.find_successor()
+      return n_.find_successor(keyId)
 
   def closet_preceding_finger(self, keyId):
     '''
@@ -166,12 +169,12 @@ class NodeServer:
     - n_ alive
     '''
     for n_ in reversed(self.succList+self.finger):
-      if n_!=None and keyInrange(n_.id, self.id+1, keyId) and n_.ping():
+      if n_!=None and keyInrange(n_.id(), self.id()+1, keyId) and n_.ping():
         return n_
     return self
 
-  # @repeat_and_sleep(STABILIZE_INT)
-  # @retry_on_socket_error(STABILIZE_RET)
+  @repeat_and_sleep(STABILIZE_INT)
+  @retry_on_socket_error(STABILIZE_RET)
   def stabilize(self):
     '''
     Periodically verify n's immediate successor,and tell the successor about n.
@@ -183,13 +186,14 @@ class NodeServer:
     '''
     succ=self.successor()
     # fix finger if succ failed
-    if succ.id!=self.finger[0].id:
+    if succ.id()!=self.finger[0].id():
       self.finger[0]=succ
     x=succ.predecessor()
-    if x!=None and keyInrange(x.id, self.id+1, self.finger[0].id+1) and x.ping():
+    if x!=None and keyInrange(x.id(), self.id()+1, self.finger[0].id()+1) and x.ping():
       self.finger[0]=x
     self.successor().notify(self)
     self.update_successor_list()
+    # return True
 
   def notify(self, n_):
     '''
@@ -197,19 +201,21 @@ class NodeServer:
     - we don't have a precedessor OR
     - n_ is in the range (pred(n), n]
     '''
-    if self.pred==None or keyInrange(n_.id, self.pred.id+1, self.id+1):
+    if self.pred==None or keyInrange(n_.id(), self.pred.id()+1, self.id()+1):
       self.pred=n_
 
-  # @repeat_and_sleep(FIX_FINGERS_INT)
+  @repeat_and_sleep(FIX_FINGERS_INT)
+  @retry_on_socket_error(FIX_FINGERS_RET)
   def fix_fingers(self):
     '''
     periodically refresh finger table entries
     '''
     if self.next>=LOGSIZE:
       self.next=0
-    keyId=(self.id+2**self.next)%(2**LOGSIZE)
+    keyId=(self.id()+2**self.next)%(2**LOGSIZE)
     self.finger[self.next]=self.find_successor(keyId)
     self.next+=1
+    # return True
   
 
   def update_successor_list(self):
@@ -217,11 +223,11 @@ class NodeServer:
     update n' succList with succ and succ's successor list
     '''
     succ=self.successor()
-    succList=[succ]
     # if we are not alone in the ring
-    if succ.id != self.id:
+    if succ.id()!=self.id():
+      succList=[succ]
       succList+=succ.get_succList()
-    self.succList=succList
+      self.succList=succList
 
   def successor(self):
     '''

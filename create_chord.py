@@ -23,7 +23,6 @@ for i in range(0, len(addrList)):
     rNodeAddr=cNodeList[random.choice(len(cNodeList))]
     cNode.join(rNodeAddr)
 
-  
   cNode.start()
   print("Created at %s, id=%d" % (addrList[i], get_hash(addrList[i]))
   cNodeList.append(addrList[i])
