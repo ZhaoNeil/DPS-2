@@ -4,7 +4,6 @@ from conf import *
 from hash import *
 import sys
 
-
 def keyInrange(key, a, b):
   '''
   is key in [a, b)?
@@ -49,6 +48,14 @@ def retry_on_socket_error(retry_limit):
     return inner
   return decorator
 
+def count_run_times(func):
+  num = 0
+  def call_fun(self, *args,**kwargs):
+    nonlocal num
+    num += 1
+    func(self,*args,**kwargs)
+    return num
+  return call_fun
 # %%
 import json
 import socket, threading
@@ -144,6 +151,7 @@ class NodeServer:
     self.update_successor_list()
 
   # @retry_on_socket_error(FIND_SUCCESSOR_RET)
+  @count_run_times
   def find_successor(self, keyId):
     '''
     ask node n to find keyid's successor

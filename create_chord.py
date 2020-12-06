@@ -21,7 +21,7 @@ for i in range(0, len(addrList)):
     cNode.join()
   else:
     # use a random already created peer's address as a remote
-    rNodeAddr=cNodeList.append(random.choice(cNodeList))
+    rNodeAddr=random.choice(cNodeList)
     cNode.join(rNodeAddr)
 
   cNode.start()
