@@ -7,7 +7,7 @@ from hash import *
 # %%
 nodeList=['127.0.0.1']
 addrList = []
-portList=[random.randint(10001,10010) for x in range(len(nodeList))]
+portList=[x for x in range(10001,10011)]
 for n in nodeList:
   addrList+=map(lambda port: (n, port), portList)
 
@@ -21,12 +21,13 @@ for i in range(0, len(addrList)):
     cNode.join()
   else:
     # use a random already created peer's address as a remote
-    rNodeAddr=cNodeList[random.choice(len(cNodeList))]
+    rNodeAddr=cNodeList.append(random.choice(cNodeList))
     cNode.join(rNodeAddr)
 
   cNode.start()
   print("Created at %s, id=%d" % (addrList[i], get_hash(addrList[i])))
   cNodeList.append(addrList[i])
   time.sleep(0.5)
-
+cNodeList = list(set(cNodeList))
+print("Chord nodes list:", cNodeList)
 # %%
