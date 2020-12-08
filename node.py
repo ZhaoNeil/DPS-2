@@ -66,6 +66,7 @@ class NodeServer:
     self.succList=[]
     self.shutdown_=False
     self.next=0
+    self.finger=list(map(lambda x: None, range(LOGSIZE)))
 
   def start(self):
     # accept connection from other threads
@@ -141,7 +142,6 @@ class NodeServer:
     '''
     join a chord ring containing node n_
     '''
-    self.finger=list(map(lambda x: None, range(LOGSIZE)))
     self.pred=None
     if rNodeAddr:  # join a chord ring containing node n_
       client=Client(rNodeAddr)
