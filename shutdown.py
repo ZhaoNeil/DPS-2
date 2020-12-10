@@ -8,6 +8,9 @@ for i in range(2):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((HOST, ports[i]))
         s.sendall("shutdown".encode('utf-8'))
+
+
+# %%
 # %%
 
 # %%

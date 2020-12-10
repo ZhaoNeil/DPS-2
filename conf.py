@@ -1,7 +1,6 @@
-LOGSIZE=5    #the size of finger table
+LOGSIZE=10    #the size of finger table
 CHORD_SIZE=2**LOGSIZE   # the maximum number of nodes in the chord ring
 NSUCCESSORS=LOGSIZE
-KEY_SIZE=100*CHORD_SIZE
 STABILIZE_INT=5  #the sleep time of the stabilize operation
 STABILIZE_RET=3   #the maximum retry times of the stabilize operation
 FIX_FINGERS_INT=5   #the sleep time of the fix_fingers operation
