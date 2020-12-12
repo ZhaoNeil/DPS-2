@@ -3,6 +3,7 @@ import socket
 import json
 from hash import *
 import threading
+from counter import *
 
 def requires_connection(func):
   '''
@@ -19,9 +20,11 @@ def requires_connection(func):
 
 
 class Client:
-  def __init__(self, server_address):
+  def __init__(self, server_address, stepCounter, timeoutCounter):
     self.addr=tuple(server_address)
     self.mutex=threading.Lock()
+    self.stepCounter=stepCounter
+    self.timeoutCounter=timeoutCounter
 
   def open_connection(self):
     self.socket_=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -68,7 +71,20 @@ class Client:
   def find_successor(self, keyId):
     self.send('find_successor %s' %keyId)
     response=json.loads(self.recv())
-    return Client(response)
+    if self.stepCounter!=None:
+      nSteps=response[1]
+      self.stepCounter.update_path_length(keyId, nSteps)
+    if self.timeoutCounter!=None:
+      nFailed=response[2]
+      self.timeoutCounter.update_nTimeout(keyId, nFailed)
+    return Client(response[0])
+
+  def update_path_length(self, keyId, nSteps):
+    with open('path_len.json', 'r') as f:
+      path_len=json.load(f)
+    path_len[keyId]=nSteps+1
+    with open('path_len.json', 'w') as f:
+      json.dump(path_len, f)
 
   @requires_connection
   def closet_preceding_finger(self, keyId):

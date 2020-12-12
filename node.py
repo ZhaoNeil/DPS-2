@@ -3,6 +3,7 @@ from client import Client
 from conf import *
 from hash import *
 import sys
+from counter import *
 
 
 def keyInrange(key, a, b):
@@ -37,8 +38,7 @@ def retry_on_socket_error(retry_limit):
       while retry_count<retry_limit:
         try:
           ret=func(self, *args, **kwargs)
-          print('retry')
-          return 
+          return ret
         except socket.error:
           time.sleep(2**retry_count)
           retry_count+=1
@@ -55,11 +55,12 @@ import json
 import socket, threading
 
 class NodeServer:
-  def __init__(self, ip, port):
+  def __init__(self, ip, port, count_steps=False, count_timeout=False):
     self.addr=(ip, port)
     self.succList=[]
     self.shutdown_=False
-    self.next=0
+    self.stepCounter=StepCounter() if count_steps else None
+    self.timeoutCounter=TimeoutCounter() if count_timeout else None
 
   def start(self):
     # accept connection from other threads
@@ -96,19 +97,31 @@ class NodeServer:
     if command=='get_successor':
       successor=self.successor()
       result=json.dumps(successor.addr)
+
     if command=='get_predecessor':
       if self.predecessor()!=None:
         predecessor=self.predecessor()
         result=json.dumps(predecessor.addr)
+
     if command=='find_successor':
-      successor=self.find_successor(int(request))
-      result=json.dumps(successor.addr)
+      keyId=int(request)
+      successor=self.find_successor(keyId)
+      result=[successor.addr]
+      if self.stepCounter!=None:
+        self.stepCounter.update_path_len(keyId, 1)
+        result.append(self.stepCounter.path_len[keyId])
+      if self.timeoutCounter!=None:
+        result.append(self.timeoutCounter.get_nTimeouts[keyId])
+      result=json.dumps(result)
+
     if command=='closet_preceding_finger':
       closet=self.closet_preceding_finger(int(request))
       result=json.dumps(closet.addr)
+
     if command=='notify':
       npred_addr=(request.split(" ")[0], int(request.split(" ")[1]))
       self.notify(Client(npred_addr))
+
     if command=='get_succList':
       succList=self.get_succList()
       result=json.dumps(list(map(lambda n: n.addr, succList)))
@@ -138,13 +151,13 @@ class NodeServer:
     self.finger=list(map(lambda x: None, range(LOGSIZE)))
     self.pred=None
     if rNodeAddr:  # join a chord ring containing node n_
-      client=Client(rNodeAddr)
+      client=Client(rNodeAddr, stepCounter=self.stepCounter)
       self.finger[0]=client.find_successor(self.id())   #return the client connecting to succ
     else:   # create a new chord ring
       self.finger[0]=self
     self.update_successor_list()
 
-  # @retry_on_socket_error(FIND_SUCCESSOR_RET)
+  @retry_on_socket_error(FIND_SUCCESSOR_RET)
   def find_successor(self, keyId):
     '''
     ask node n to find keyid's successor
@@ -157,10 +170,14 @@ class NodeServer:
     if self.predecessor() and keyInrange(keyId, self.predecessor().id()+1, self.id()+1):
       return self
     elif keyInrange(keyId, self.id()+1, self.successor().id()+1):
-      return self.successor()
+      for n_ in [self.finger[0]]+self.succList:
+        if self.check_connection(n_, keyId):
+          self.finger[0]=n_
+          return n_
     else:
       n_=self.closet_preceding_finger(keyId)
       return n_.find_successor(keyId)
+
 
   def closet_preceding_finger(self, keyId):
     '''
@@ -169,9 +186,17 @@ class NodeServer:
     - n_ alive
     '''
     for n_ in reversed(self.succList+self.finger):
-      if n_!=None and keyInrange(n_.id(), self.id()+1, keyId) and n_.ping():
-        return n_
+      if n_!=None and keyInrange(n_.id(), self.id()+1, keyId):
+        if self.check_connection(n_, keyId):
+          return n_
     return self
+
+  def check_connection(self, n_, keyId):
+    if self.ping(n_):
+      return True
+    if self.timeoutCounter:
+      self.timeoutCounter.update_timeouts(n_, keyId)
+    return False
 
   @repeat_and_sleep(STABILIZE_INT)
   @retry_on_socket_error(STABILIZE_RET)
@@ -205,7 +230,6 @@ class NodeServer:
       self.pred=n_
 
   @repeat_and_sleep(FIX_FINGERS_INT)
-  @retry_on_socket_error(FIX_FINGERS_RET)
   def fix_fingers(self):
     '''
     periodically refresh finger table entries
