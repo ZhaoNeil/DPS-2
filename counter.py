@@ -5,6 +5,8 @@ class StepCounter:
   def update_path_len(self, keyId, nSteps):
     if keyId not in self.path_len:
       self.path_len[keyId]=nSteps
+    else:
+      self.path_len[keyId]+=nSteps
 
 
 class TimeoutCounter:

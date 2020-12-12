@@ -167,6 +167,9 @@ class NodeServer:
     2. the succ is succ(n) iff:
       - keyid is in (n, succ(n)]
     '''
+    if self.stepCounter!=None:
+      self.stepCounter.update_path_len(keyId,1)
+      
     if self.predecessor() and keyInrange(keyId, self.predecessor().id()+1, self.id()+1):
       return self
     elif keyInrange(keyId, self.id()+1, self.successor().id()+1):
