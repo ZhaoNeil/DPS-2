@@ -59,6 +59,7 @@ class NodeServer:
     self.addr=(ip, port)
     self.succList=[]
     self.shutdown_=False
+    self.next=0
     self.stepCounter=StepCounter() if count_steps else None
     self.timeoutCounter=TimeoutCounter() if count_timeout else None
 
@@ -157,7 +158,7 @@ class NodeServer:
       self.finger[0]=self
     self.update_successor_list()
 
-  @retry_on_socket_error(FIND_SUCCESSOR_RET)
+  # @retry_on_socket_error(FIND_SUCCESSOR_RET)
   def find_successor(self, keyId):
     '''
     ask node n to find keyid's successor
@@ -195,7 +196,7 @@ class NodeServer:
     return self
 
   def check_connection(self, n_, keyId):
-    if self.ping(n_):
+    if self.ping():
       return True
     if self.timeoutCounter:
       self.timeoutCounter.update_timeouts(n_, keyId)

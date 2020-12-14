@@ -20,11 +20,11 @@ def requires_connection(func):
 
 
 class Client:
-  def __init__(self, server_address, stepCounter, timeoutCounter):
+  def __init__(self, server_address, stepCounter=False, timeoutCounter=False):
     self.addr=tuple(server_address)
     self.mutex=threading.Lock()
-    self.stepCounter=stepCounter
-    self.timeoutCounter=timeoutCounter
+    self.stepCounter = stepCounter if stepCounter else None
+    self.timeoutCounter = timeoutCounter if timeoutCounter else None
 
   def open_connection(self):
     self.socket_=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,7 +73,7 @@ class Client:
     response=json.loads(self.recv())
     if self.stepCounter!=None:
       nSteps=response[1]
-      self.stepCounter.update_path_length(keyId, nSteps)
+      self.stepCounter.update_path_len(keyId, nSteps)
     if self.timeoutCounter!=None:
       nFailed=response[2]
       self.timeoutCounter.update_nTimeout(keyId, nFailed)
