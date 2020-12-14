@@ -28,7 +28,7 @@ for i in range(0, len(addrList)):
   cNode.start()
   print("Created at %s, id=%d" % (addrList[i], get_hash(addrList[i])))
   cNodeList.append(addrList[i])
+  print('Path_length', cNode.stepCounter.path_len)
   time.sleep(0.5)
 # %%
-print(cNodeList)
 # %%

@@ -80,7 +80,7 @@ class NodeServer:
       try:
         conn, addr=self.socket_.accept()
         conn.settimeout(120)
-        print("Connection from %s" %(str(addr)))
+        # print("Connection from %s" %(str(addr)))
         threading.Thread(target=self.connection_thread, args=(conn, addr)).start()
       except socket.error:
         self.shutdown_=True
