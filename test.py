@@ -7,7 +7,7 @@ import random
 # %%
 nodeList=['127.0.0.1']
 addrList=[]
-nNodes=3
+nNodes=5
 portList=random.sample(range(10001, 10010), nNodes)
 for n in nodeList:
   addrList+=list(map(lambda port: (n, port), portList))
