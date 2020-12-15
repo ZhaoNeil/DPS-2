@@ -3,6 +3,7 @@ from node import *
 from client import *
 from conf import *
 import random
+from get_ip import *
 
 # %%
 nodeList=['127.0.0.1']

@@ -196,7 +196,7 @@ class NodeServer:
     return self
 
   def check_connection(self, n_, keyId):
-    if self.ping():
+    if n_.ping():
       return True
     if self.timeoutCounter:
       self.timeoutCounter.update_timeouts(n_, keyId)

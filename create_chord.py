@@ -3,15 +3,11 @@ import sys
 import random
 from node import *
 from hash import *
-
 # %%
-nodeList=['127.0.0.1']
-addrList=[]
-nNodes=3
-portList=random.sample(range(10001, 10010), nNodes)
-for n in nodeList:
-  addrList+=list(map(lambda port: (n, port), portList))
-
+addrList = []
+f = open('./addrAll.txt')
+for line in f:
+  addrList.append(line)
 # %%
 # create the chord nodes
 cNodeList=[]
