@@ -16,10 +16,11 @@ def lookup(cNode, keyId):
   return False
 
 if __name__=="__main__":
-  local='127.0.0.1'
-  port=int(sys.argv[1])
+  # local='127.0.0.1'
+  # port=int(sys.argv[1])
+  addr = sys.argv[1]
   rNodeAddr=sys.argv[2]
-  cNode=create_cNode(local, port, count_steps=True)
+  cNode=create_cNode(addr[0], addr[1], count_steps=True)
 
   nStep=[]
   keyIdList=random.sample(range(CHORD_SIZE), NQUERY)
@@ -31,7 +32,7 @@ if __name__=="__main__":
       nStep.append(False)
 
 
-  path_file='steps_'+str(port)'.txt'
+  path_file='steps_'+str(port)+'.txt'
 
   with open(path_file, 'w+') as f:
     for i in len(keyIdList):

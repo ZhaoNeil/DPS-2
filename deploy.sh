@@ -3,13 +3,16 @@ nodes=$(echo $var1 | grep -P 'node\d+' -o)
 
 for node in $nodes
 do
-	ssh $node 'python create_addr.py'
-    touch addrAll.txt
-    cat addrList.txt > addrAll.txt
+{
+    ssh $node
+    cd ./DPS-2
+    while read line
+    do
+    {
+    python e1.py $line 
+    }&
+    done < addrList.txt
+    rm addrList.txt
+}&
 done
-
-for node in $nodes
-do
-    ssh $node 'python create_chord.py'
-    break
-done
+wait
