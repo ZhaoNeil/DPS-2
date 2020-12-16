@@ -1,12 +1,14 @@
 import sys
 from node import *
 from conf import *
+import os
 
 
 def create_cNode(port, rNodeAddr):
   cNode=NodeServer(local, port)
   cNode.join(rNodeAddr)
   cNode.start()
+  print("Created at id=%d" % (cNode.id()))
 
 def lookup(cNode, keyId):
   if keyId in cNode.stepCounter.path_len:
@@ -16,11 +18,16 @@ def lookup(cNode, keyId):
   return False
 
 if __name__=="__main__":
-  # local='127.0.0.1'
-  # port=int(sys.argv[1])
-  addr = sys.argv[1]
+  local='127.0.0.1'
+  port=int(sys.argv[1])
   rNodeAddr=sys.argv[2]
-  cNode=create_cNode(addr[0], addr[1], count_steps=True)
+  if rNodeAddr=='None':
+    rNodeAddr=None
+  else:
+    rNodeAddr=(rNodeAddr.split(':')[0], int(rNodeAddr.split(':')[1]))
+  cNode=create_cNode(local, port, count_steps=True)
+
+  time.sleep(60)
 
   nStep=[]
   keyIdList=random.sample(range(CHORD_SIZE), NQUERY)
@@ -31,11 +38,14 @@ if __name__=="__main__":
     else:
       nStep.append(False)
 
+  folder='~/DPS-2/e1_'+str(LOGSIZE)
+  file=str(cNode.id())'.txt'
 
-  path_file='steps_'+str(port)+'.txt'
-
-  with open(path_file, 'w+') as f:
+  with open(os.path.join(folder, file), 'w+') as f:
     for i in len(keyIdList):
       f.write(str(keyIdList[i])+'\t'+str(nStep[i]))
       f.write('\n')
+
+  time.sleep(30)
+  cNode.shutdown()
 

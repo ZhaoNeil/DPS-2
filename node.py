@@ -22,12 +22,13 @@ import time
 def repeat_and_sleep(sleep_time):
   def decorator(func):
     def inner(self, *args, **kwargs):
-      while 1:
+      while not self.stopFixing:
         time.sleep(sleep_time)
         if self.shutdown_:
           print('finished')
           return
         ret=func(self, *args, **kwargs)
+      return
     return inner
   return decorator
 
@@ -60,6 +61,7 @@ class NodeServer:
     self.succList=[]
     self.shutdown_=False
     self.next=0
+    self.stopFixing=False
     self.stepCounter=StepCounter() if count_steps else None
     self.timeoutCounter=TimeoutCounter() if count_timeout else None
 
@@ -79,7 +81,6 @@ class NodeServer:
     while True:
       try:
         conn, addr=self.socket_.accept()
-        conn.settimeout(120)
         # print("Connection from %s" %(str(addr)))
         threading.Thread(target=self.connection_thread, args=(conn, addr)).start()
       except socket.error:
@@ -90,7 +91,7 @@ class NodeServer:
     '''
     Processing msgs from the remote clients
     '''
-    request=conn.recv(256).decode('utf-8')
+    request=conn.recv(1024).decode('utf-8')
     command=request.split(" ")[0]
     request=request[len(command)+1:]
   
@@ -109,10 +110,9 @@ class NodeServer:
       successor=self.find_successor(keyId)
       result=[successor.addr]
       if self.stepCounter!=None:
-        self.stepCounter.update_path_len(keyId, 1)
         result.append(self.stepCounter.path_len[keyId])
       if self.timeoutCounter!=None:
-        result.append(self.timeoutCounter.get_nTimeouts[keyId])
+        result.append(self.timeoutCounter.get_nTimeout(keyId))
       result=json.dumps(result)
 
     if command=='closet_preceding_finger':
@@ -121,7 +121,7 @@ class NodeServer:
 
     if command=='notify':
       npred_addr=(request.split(" ")[0], int(request.split(" ")[1]))
-      self.notify(Client(npred_addr))
+      self.notify(Client(npred_addr, self.stepCounter, self.timeoutCounter))
 
     if command=='get_succList':
       succList=self.get_succList()
@@ -132,12 +132,14 @@ class NodeServer:
 
     if command=='shutdown':
       self.socket_.close()
-      self.shutdown_=True
+      self.shutdown_ = True
+      
 
   def shutdown(self):
     self.shutdown_=True
-    self.socket_.shutdown(socket.SHUT_RDWR)
+    # self.socket_.shutdown(1)
     self.socket_.close()
+    print('shutdown')
 
   def ping(self):
     return True
@@ -152,13 +154,13 @@ class NodeServer:
     self.finger=list(map(lambda x: None, range(LOGSIZE)))
     self.pred=None
     if rNodeAddr:  # join a chord ring containing node n_
-      client=Client(rNodeAddr, stepCounter=self.stepCounter)
+      client=Client(rNodeAddr, self.stepCounter, self.timeoutCounter)
       self.finger[0]=client.find_successor(self.id())   #return the client connecting to succ
     else:   # create a new chord ring
       self.finger[0]=self
     self.update_successor_list()
 
-  # @retry_on_socket_error(FIND_SUCCESSOR_RET)
+  @retry_on_socket_error(FIND_SUCCESSOR_RET)
   def find_successor(self, keyId):
     '''
     ask node n to find keyid's successor
@@ -169,15 +171,12 @@ class NodeServer:
       - keyid is in (n, succ(n)]
     '''
     if self.stepCounter!=None:
-      self.stepCounter.update_path_len(keyId,1)
-      
+      self.stepCounter.update_path_len(keyId, 1)
+
     if self.predecessor() and keyInrange(keyId, self.predecessor().id()+1, self.id()+1):
       return self
-    elif keyInrange(keyId, self.id()+1, self.successor().id()+1):
-      for n_ in [self.finger[0]]+self.succList:
-        if self.check_connection(n_, keyId):
-          self.finger[0]=n_
-          return n_
+    elif keyInrange(keyId, self.id()+1, self.successor(keyId).id()+1):
+      return self.successor(keyId)
     else:
       n_=self.closet_preceding_finger(keyId)
       return n_.find_successor(keyId)
@@ -195,11 +194,11 @@ class NodeServer:
           return n_
     return self
 
-  def check_connection(self, n_, keyId):
+  def check_connection(self, n_, keyId=None):
     if n_.ping():
       return True
-    if self.timeoutCounter:
-      self.timeoutCounter.update_timeouts(n_, keyId)
+    if self.timeoutCounter!=None and keyId!=None:
+      self.timeoutCounter.update_failedAddr(keyId, n_)
     return False
 
   @repeat_and_sleep(STABILIZE_INT)
@@ -257,15 +256,18 @@ class NodeServer:
       succList+=succ.get_succList()
       self.succList=succList
 
-  def successor(self):
+  def successor(self, keyId=None):
     '''
     return an existing successor, there might be redundance between finger[0]
     and succList[0], but it doesn't harm
     '''
     for n_ in [self.finger[0]]+self.succList:
-      if n_.ping():
+      if self.check_connection(n_, keyId):
+        # print(n_.id(), self.check_connection(n_))
         self.finger[0]=n_
         return n_
+    self.shutdown_=True
+    sys.exit(-1)
   
   def predecessor(self):
     return self.pred

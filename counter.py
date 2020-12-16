@@ -11,20 +11,26 @@ class StepCounter:
 
 class TimeoutCounter:
   def __init__(self):
-    self.timeouts={}
+    self.failedAddr={}
     self.nTimeout={}
 
-  def update_timeouts(self, keyId, n_):
-    if keyId not in self.timeouts:
-      self.timeouts[keyId]=[n_.addr]
-      self.nTimeout[keyId]=1
+  def update_failedAddr(self, keyId, n_):
+    if keyId not in self.failedAddr:
+      self.failedAddr[keyId]=[n_.addr]
+      self.update_nTimeout(keyId, 1)
     else:
-      if n_.addr not in self.timeouts[keyId]:
-        self.timeouts[keyId].append(n_.addr)
-        self.nTimeouts[keyId]+=1
+      if n_.addr not in self.failedAddr[keyId]:
+        self.failedAddr[keyId].append(n_.addr)
+        self.update_nTimeout(keyId, 1)
 
   def update_nTimeout(self, keyId, nFailed):
-    if keyId not in self.nTimeout:
-      self.nTimeout[keyId]=nFailed
-    else:
-      self.nTimeout[keyId]+=nFailed
+    if nFailed>0:
+      if keyId not in self.nTimeout:
+        self.nTimeout[keyId]=nFailed
+      else:
+        self.nTimeout[keyId]+=nFailed
+
+  def get_nTimeout(self, keyId):
+    if keyId in self.nTimeout:
+      return self.nTimeout[keyId]
+    return 0
