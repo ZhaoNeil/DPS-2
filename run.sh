@@ -10,9 +10,9 @@ for i in ${!nodes[@]}
 do
 {
     for j in ${!ports[@]}
-	{
-		time.sleep(i+j*2)
-		
+    do
+	{	time=$(($i+$j))
+		sleep $time
 		if [ $i -eq 0 ] && [ $j -eq 0 ]
 		then
 			rNodeAddr='None'
@@ -21,9 +21,8 @@ do
 			rNodeAddr=${addrList[$ix]}
 		fi
 		addrList+=(${nodes[$i]}':'${ports[$j]})
-		ssh ${nodes[$i]} python3 -u python e1.py ${ports[$j]} $rNodeAddr
-    }&
-    done
+		ssh ${nodes[$i]} python3 -u ~/DPS-2/e1.py ${ports[$j]} $rNodeAddr
+    }& done
 }&
 done
 wait
