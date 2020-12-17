@@ -4,19 +4,9 @@ from conf import *
 from hash import *
 import sys
 from counter import *
+from range import *
+import random
 
-
-def keyInrange(key, a, b):
-  '''
-  is key in [a, b)?
-  '''
-  a=a%CHORD_SIZE
-  b=b%CHORD_SIZE
-  key=key%CHORD_SIZE
-  if a<b:
-    return a<=key and key<b
-  else:
-    return a<=key or key<b
 
 import time
 def repeat_and_sleep(sleep_time):
@@ -60,7 +50,7 @@ class NodeServer:
     self.addr=(ip, port)
     self.succList=[]
     self.shutdown_=False
-    self.next=0
+    # self.next=0
     self.stopFixing=False
     self.stepCounter=StepCounter() if count_steps else None
     self.timeoutCounter=TimeoutCounter() if count_timeout else None
@@ -77,7 +67,7 @@ class NodeServer:
     '''
     self.socket_=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.socket_.bind(self.addr)
-    self.socket_.listen(10)
+    self.socket_.listen()
     while True:
       try:
         conn, addr=self.socket_.accept()
@@ -144,8 +134,8 @@ class NodeServer:
   def ping(self):
     return True
 
-  def id(self):
-    return get_hash(self.addr)
+  def id(self, offset=0):
+    return (get_hash(self.addr)+offset)%CHORD_SIZE
 
   def join(self, rNodeAddr=None):
     '''
@@ -171,11 +161,11 @@ class NodeServer:
       - keyid is in (n, succ(n)]
     '''
     if self.stepCounter!=None:
-      self.stepCounter.update_path_len(keyId, 1)
+      self.stepCounter.init_path_len(keyId)
 
-    if self.predecessor() and keyInrange(keyId, self.predecessor().id()+1, self.id()+1):
+    if self.predecessor() and keyInrange(keyId, self.predecessor().id(1), self.id(1)):
       return self
-    elif keyInrange(keyId, self.id()+1, self.successor(keyId).id()+1):
+    elif keyInrange(keyId, self.id(1), self.successor(keyId).id(1)):
       return self.successor(keyId)
     else:
       n_=self.closet_preceding_finger(keyId)
@@ -189,7 +179,7 @@ class NodeServer:
     - n_ alive
     '''
     for n_ in reversed(self.succList+self.finger):
-      if n_!=None and keyInrange(n_.id(), self.id()+1, keyId):
+      if n_!=None and keyInrange(n_.id(), self.id(1), keyId):
         if self.check_connection(n_, keyId):
           return n_
     return self
@@ -210,14 +200,13 @@ class NodeServer:
     - x=pred(succ(n))
     - x alive
     - x is in range (n, succ(n))
-    # - [n+1, succ(n)] is non-empty
     '''
     succ=self.successor()
     # fix finger if succ failed
     if succ.id()!=self.finger[0].id():
       self.finger[0]=succ
     x=succ.predecessor()
-    if x!=None and keyInrange(x.id(), self.id()+1, self.finger[0].id()+1) and x.ping():
+    if x!=None and keyInrange(x.id(), self.id(1), self.finger[0].id(1)) and x.ping():
       self.finger[0]=x
     self.successor().notify(self)
     self.update_successor_list()
@@ -228,20 +217,32 @@ class NodeServer:
     n_ thinks it might be our predecessor, they are iff
     - we don't have a precedessor OR
     - n_ is in the range (pred(n), n]
+    - our previous predecessor is dead
     '''
-    if self.pred==None or keyInrange(n_.id(), self.pred.id()+1, self.id()+1):
+    if self.pred==None or \
+      keyInrange(n_.id(), self.pred.id(1), self.id(1)) or \
+      not self.predecessor().ping():
       self.pred=n_
+
+  # @repeat_and_sleep(FIX_FINGERS_INT)
+  # def fix_fingers(self):
+  #   '''
+  #   periodically refresh finger table entries
+  #   '''
+  #   if self.next>=LOGSIZE:
+  #     self.next=0
+  #   keyId=(self.id()+2**self.next)%(2**LOGSIZE)
+  #   self.finger[self.next]=self.find_successor(keyId)
+  #   self.next+=1
+  #   # return True
 
   @repeat_and_sleep(FIX_FINGERS_INT)
   def fix_fingers(self):
     '''
-    periodically refresh finger table entries
+    randomly select an entry in finger and update its value
     '''
-    if self.next>=LOGSIZE:
-      self.next=0
-    keyId=(self.id()+2**self.next)%(2**LOGSIZE)
-    self.finger[self.next]=self.find_successor(keyId)
-    self.next+=1
+    i=random.randrange(LOGSIZE-1)+1
+    self.finger[i]=self.find_successor(self.id(1<<i))
     # return True
   
 

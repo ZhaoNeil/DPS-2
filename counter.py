@@ -2,6 +2,9 @@ class StepCounter:
   def __init__(self):
     self.path_len={}
 
+  def init_path_len(self, keyId):
+    self.path_len[keyId]=1
+
   def update_path_len(self, keyId, nSteps):
     if keyId not in self.path_len:
       self.path_len[keyId]=nSteps

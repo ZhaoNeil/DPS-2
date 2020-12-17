@@ -4,6 +4,7 @@ import json
 from hash import *
 import threading
 from counter import *
+from range import *
 
 def requires_connection(func):
   '''
@@ -38,7 +39,7 @@ class Client:
     self.socket_.sendall(msg.encode('utf-8'))
 
   def recv(self):
-    return self.socket_.recv(4096).decode('utf-8')
+    return self.socket_.recv(2048).decode('utf-8')
 
   def ping(self):
     try:
@@ -50,8 +51,8 @@ class Client:
     except socket.error:
       return False
 
-  def id(self):
-    return get_hash(self.addr)
+  def id(self, offset=0):
+    return (get_hash(self.addr)+offset)%CHORD_SIZE
 
   @requires_connection
   def successor(self):
