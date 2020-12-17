@@ -17,6 +17,8 @@ def repeat_and_sleep(sleep_time):
           #print('finished')
           return
         ret=func(self, *args, **kwargs)
+        if not ret:
+          return
       return
     return inner
   return decorator
@@ -232,7 +234,7 @@ class NodeServer:
       self.finger[0]=x
     self.successor().notify(self)
     self.update_successor_list()
-    # return True
+    return True
 
   def notify(self, n_):
     '''
@@ -265,7 +267,7 @@ class NodeServer:
     '''
     i=random.randrange(LOGSIZE-1)+1
     self.finger[i]=self.find_successor(self.id(1<<i))
-    # return True
+    return True
   
 
   def update_successor_list(self):
