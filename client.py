@@ -38,7 +38,7 @@ class Client:
     self.socket_.sendall(msg.encode('utf-8'))
 
   def recv(self):
-    return self.socket_.recv(256).decode('utf-8')
+    return self.socket_.recv(4096).decode('utf-8')
 
   def ping(self):
     try:
