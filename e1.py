@@ -46,7 +46,7 @@ if __name__=="__main__":
     else:
       nStep[keyId]=False
 
-  filename='/home/ddps2012/e1_'+str(LOGSIZE)+'.txt'
+  filename='/home/ddps2012/e1_'+str(LOGSIZE)+'_'+ip+'.txt'
 
   with open(filename, 'w+') as f:
     for keyId, length in nStep.items():
@@ -54,6 +54,6 @@ if __name__=="__main__":
       f.write('\n')
 
   time.sleep(30)
-  for cNode on cNodeList:
+  for cNode in cNodeList:
     cNode.shutdown()
 
