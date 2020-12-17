@@ -11,7 +11,7 @@ def create_cNode(port, rNodeAddr):
   cNode.join(rNodeAddr)
   cNode.start()
   print("Created at id=%d" % (cNode.id()))
-  time.sleep(0.5)
+  time.sleep(0.25)
   return cNode
 
 def lookup(cNode, keyId):
@@ -55,8 +55,8 @@ if __name__=="__main__":
       failedId.append(cNode.id())
 
   #write failed node ids to the disk
-  # folder='/home/ddps2012/result'
-  folder='d:/dps/a2/result'
+  folder='/home/ddps2012/result'
+  #folder='d:/dps/a2/result'
   failed_file='failed_'+str(FAIL_PROB)+'_'+str(cNodeList[0].id())+'.txt'
   if len(failedId)>0:
     with open(os.path.join(folder, failed_file), 'w+') as f:

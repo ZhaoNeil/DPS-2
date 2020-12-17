@@ -40,11 +40,12 @@ def get_true_id(keyId, nodeIds):
 
 # %%
 if __name__ == "__main__":
-  # folder='/home/ddps2012/result'
-  folder='d:/dps/a2/result'
+  folder='/home/ddps2012/result'
+  #folder='d:/dps/a2/result'
   logsize=int(sys.argv[1])
   result=read_result(logsize)
   nodeIds=sorted(get_node_ids(logsize))
+  print(len(nodeIds))
   mistakes=[]
   for r in result:
     keyId, targetId=r[1], r[2]
@@ -54,7 +55,7 @@ if __name__ == "__main__":
       print(False)
 
   if len(mistakes)>0:
-    file=os.path.join(folder, 'mis_e1+'+str(logsize)+'.txt')
+    file=os.path.join(folder, 'mis_e1_'+str(logsize)+'.txt')
     with open(file, 'w+') as f:
       f.write('\t'.join(['keyId', 'trueId', 'targetId']))
       f.write('\n')

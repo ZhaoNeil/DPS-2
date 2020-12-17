@@ -9,7 +9,7 @@ def create_cNode(port, rNodeAddr):
   cNode.join(rNodeAddr)
   cNode.start()
   print("Created at id=%d" % (cNode.id()))
-  time.sleep(0.5)
+  time.sleep(0.2)
   return cNode
 
 def lookup(cNode, keyId):
@@ -38,9 +38,10 @@ if __name__=="__main__":
       rNodeAddr=random.choice(cNodeList).addr
     cNodeList.append(create_cNode(ports[i], rNodeAddr))
 
-  time.sleep(30)
+  time.sleep(45)
 
   #perfrom lookups
+  print("Lookup begins")
   nStep={}
 
   for keyId in random.sample(range(CHORD_SIZE), NQUERY):
@@ -50,10 +51,11 @@ if __name__=="__main__":
       nStep[(cNode.id(), keyId)]=(targetId, steps)
     else:
       nStep[(cNode.id(), keyId)]=(False, False)
+  print("Lookup finished")
 
   #write the lookup results to the disk
-  # folder='/home/ddps2012/result'
-  folder='d:/dps/a2/result'
+  folder='/home/ddps2012/result'
+  #folder='d:/dps/a2/result'
   filename='e1_'+str(LOGSIZE)+'_'+str(cNodeList[0].id())+'.txt'
 
   with open(os.path.join(folder, filename), 'w+') as f:
