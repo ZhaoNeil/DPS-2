@@ -15,7 +15,7 @@ def repeat_and_sleep(sleep_time):
       while not self.stopFixing:
         time.sleep(sleep_time)
         if self.shutdown_:
-          print('finished')
+          #print('finished')
           return
         ret=func(self, *args, **kwargs)
       return
@@ -67,7 +67,7 @@ class NodeServer:
     '''
     self.socket_=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.socket_.bind(self.addr)
-    self.socket_.listen()
+    self.socket_.listen(10)
     while True:
       try:
         conn, addr=self.socket_.accept()
