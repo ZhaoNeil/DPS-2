@@ -59,6 +59,7 @@ class NodeServer:
     threading.Thread(target=self.listen_thread, args=()).start()
     threading.Thread(target=self.stabilize, args=()).start()
     threading.Thread(target=self.fix_fingers, args=()).start()
+    threading.Thread(target=self.update_successor_list, args=()).start()
 
   def listen_thread(self):
     '''
@@ -233,7 +234,6 @@ class NodeServer:
     if x!=None and keyInrange(x.id(), self.id(1), self.finger[0].id(1)) and x.ping():
       self.finger[0]=x
     self.successor().notify(self)
-    self.update_successor_list()
     return True
 
   def notify(self, n_):
@@ -269,7 +269,8 @@ class NodeServer:
     self.finger[i]=self.find_successor(self.id(1<<i))
     return True
   
-
+  @repeat_and_sleep(UPDATE_SUCCESSORS_INT)
+  @retry_on_socket_error(UPDATE_SUCCESSORS_RET)
   def update_successor_list(self):
     '''
     update n' succList with succ and succ's successor list
@@ -280,6 +281,7 @@ class NodeServer:
       succList=[succ]
       succList+=succ.get_succList()
       self.succList=succList
+    return True
 
   def successor(self):
     '''
