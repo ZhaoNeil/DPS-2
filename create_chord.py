@@ -36,7 +36,7 @@ def check_key_lookup():
 # %%
 local='127.0.0.1'
 addrList=[]
-portList=list(range(10001, 10010))
+portList=list(range(10001, 10020))
 
 # %%
 # create the chord nodes
@@ -44,7 +44,7 @@ addrList=[]
 cNodeList=[]
 
 for port in portList:
-  cNode=NodeServer(local, port, count_timeout=True)
+  cNode=NodeServer(local, port)
   if len(addrList)==0: 
     cNode.join()
   else:
@@ -56,7 +56,6 @@ for port in portList:
   addrList.append((local, port))
   cNodeList.append(cNode)
   print("Created at %s, id=%d" % (addrList[-1], get_hash(addrList[-1])))
-  time.sleep(1)
 # %%
 time.sleep(20)
 print('check begins')

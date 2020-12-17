@@ -14,13 +14,13 @@ def read_result(prob):
     with open(file, 'r') as f:
       next(f)
       for line in f:
-        keyId, targetId, steps=line.strip().split('\t')
-        result.append([int(keyId), int(targetId), int(steps)])
+        fromId, keyId, targetId, steps=line.strip().split('\t')
+        result.append([int(fromId), int(keyId), int(targetId), int(steps)])
   return result
 
 def get_node_ids(prob):
   nodeIds=[]
-  ports=range(10020, 10040)
+  ports=range(PORT_FROM, PORT_TO)
   file=os.path.join(folder, 'ips_e2_'+str(prob)+'.txt')
   with open(file, 'r') as f:
     for line in f:
@@ -51,21 +51,19 @@ def get_true_id(keyId, nodeIds, failedId):
 
 # %%
 if __name__ == "__main__":
-  folder='/home/ddps2012/result'
-  # folder='d:/dps/a2/DPS-2/result'
+  # folder='/home/ddps2012/result'
+  folder='d:/dps/a2/result'
   prob=float(sys.argv[1])
   result=read_result(prob)
   nodeIds=sorted(get_node_ids(prob))
   failedId=get_failed_ids(prob)
   mistakes=[]
   for r in result:
-    keyId, targetId=r[0], r[1]
+    keyId, targetId=r[1], r[2]
     trueId=get_true_id(keyId, nodeIds, failedId)
     if trueId!=targetId:
       mistakes.append([keyId, trueId, targetId])
       print(False)
-    else:
-      print(True)
 
   if len(mistakes)>0:
     file=os.path.join(folder, 'mis_e2+'+str(prob)+'.txt')

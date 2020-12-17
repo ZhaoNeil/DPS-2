@@ -3,7 +3,6 @@ from client import Client
 from conf import *
 from hash import *
 import sys
-from counter import *
 from range import *
 import random
 
@@ -46,14 +45,12 @@ import json
 import socket, threading
 
 class NodeServer:
-  def __init__(self, ip, port, count_steps=False, count_timeout=False):
+  def __init__(self, ip, port):
     self.addr=(ip, port)
     self.succList=[]
     self.shutdown_=False
     # self.next=0
     self.stopFixing=False
-    self.stepCounter=StepCounter() if count_steps else None
-    self.timeoutCounter=TimeoutCounter() if count_timeout else None
 
   def start(self):
     # accept connection from other threads
@@ -98,12 +95,17 @@ class NodeServer:
     if command=='find_successor':
       keyId=int(request)
       successor=self.find_successor(keyId)
-      result=[successor.addr]
-      if self.stepCounter!=None:
-        result.append(self.stepCounter.path_len[keyId])
-      if self.timeoutCounter!=None:
-        result.append(self.timeoutCounter.get_nTimeout(keyId))
-      result=json.dumps(result)
+      result=json.dumps(successor.addr)
+    
+    if command=='count_step':
+      keyId=int(request)
+      successor, steps=self.count_step(keyId)
+      result=json.dumps((successor.addr, steps))
+
+    if command=='count_timeout':
+      keyId=int(request)
+      successor, timeouts=self.count_timeout(keyId)
+      result=json.dumps((successor.addr, timeouts))
 
     if command=='closet_preceding_finger':
       closet=self.closet_preceding_finger(int(request))
@@ -111,7 +113,7 @@ class NodeServer:
 
     if command=='notify':
       npred_addr=(request.split(" ")[0], int(request.split(" ")[1]))
-      self.notify(Client(npred_addr, self.stepCounter, self.timeoutCounter))
+      self.notify(Client(npred_addr))
 
     if command=='get_succList':
       succList=self.get_succList()
@@ -144,7 +146,7 @@ class NodeServer:
     self.finger=list(map(lambda x: None, range(LOGSIZE)))
     self.pred=None
     if rNodeAddr:  # join a chord ring containing node n_
-      client=Client(rNodeAddr, self.stepCounter, self.timeoutCounter)
+      client=Client(rNodeAddr)
       self.finger[0]=client.find_successor(self.id())   #return the client connecting to succ
     else:   # create a new chord ring
       self.finger[0]=self
@@ -160,18 +162,46 @@ class NodeServer:
     2. the succ is succ(n) iff:
       - keyid is in (n, succ(n)]
     '''
-    if self.stepCounter!=None:
-      self.stepCounter.init_path_len(keyId)
-
     if self.predecessor() and keyInrange(keyId, self.predecessor().id(1), self.id(1)):
       return self
-    elif keyInrange(keyId, self.id(1), self.successor(keyId).id(1)):
-      return self.successor(keyId)
+    elif keyInrange(keyId, self.id(1), self.successor().id(1)):
+      return self.successor()
     else:
       n_=self.closet_preceding_finger(keyId)
       return n_.find_successor(keyId)
 
+  def count_step(self, keyId):
+    if self.predecessor() and keyInrange(keyId, self.predecessor().id(1), self.id(1)):
+      return (self, 1)
+    elif keyInrange(keyId, self.id(1), self.successor().id(1)):
+      return (self.successor(), 1)
+    else:
+      n_=self.closet_preceding_finger(keyId)
+      target, steps=n_.count_step(keyId)
+      return (target, steps+1)
 
+  def count_timeout(self, keyId):
+    failed=set()
+    #check if the target is myself
+    if self.predecessor() and keyInrange(keyId, self.predecessor().id(1), self.id(1)):
+      return (self, 0)
+
+    #check if the target is my successor
+    for n_ in [self.finger[0]]+self.succList:
+      if keyInrange(keyId, self.id(1), n_.id(1)):
+        if n_.ping():
+          return (n_, len(failed))
+        failed.add(n_)
+
+    #look for the closet finger that precedes the keyId
+    for n_ in reversed(self.succList+self.finger):
+      if n_!=None and keyInrange(n_.id(), self.id(1), keyId):
+        if n_.ping():
+          target, nTimeout=n_.count_timeout(keyId)
+          return (target, len(failed)+nTimeout)
+        failed.add(n_)
+    return (self, len(failed))
+    
   def closet_preceding_finger(self, keyId):
     '''
     return the closet finger n_ preceding keyid iff:
@@ -179,17 +209,9 @@ class NodeServer:
     - n_ alive
     '''
     for n_ in reversed(self.succList+self.finger):
-      if n_!=None and keyInrange(n_.id(), self.id(1), keyId):
-        if self.check_connection(n_, keyId):
-          return n_
+      if n_!=None and keyInrange(n_.id(), self.id(1), keyId) and n_.ping():
+        return n_
     return self
-
-  def check_connection(self, n_, keyId=None):
-    if n_.ping():
-      return True
-    if self.timeoutCounter!=None and keyId!=None:
-      self.timeoutCounter.update_failedAddr(keyId, n_)
-    return False
 
   @repeat_and_sleep(STABILIZE_INT)
   @retry_on_socket_error(STABILIZE_RET)
@@ -257,14 +279,13 @@ class NodeServer:
       succList+=succ.get_succList()
       self.succList=succList
 
-  def successor(self, keyId=None):
+  def successor(self):
     '''
     return an existing successor, there might be redundance between finger[0]
     and succList[0], but it doesn't harm
     '''
     for n_ in [self.finger[0]]+self.succList:
-      if self.check_connection(n_, keyId):
-        # print(n_.id(), self.check_connection(n_))
+      if n_.ping():
         self.finger[0]=n_
         return n_
     self.shutdown_=True

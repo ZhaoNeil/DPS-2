@@ -5,21 +5,22 @@ import os
 import random
 
 def create_cNode(port, rNodeAddr):
-  cNode=NodeServer(ip, ports[i], count_steps=True)
+  cNode=NodeServer(ip, ports[i])
   cNode.join(rNodeAddr)
   cNode.start()
   print("Created at id=%d" % (cNode.id()))
+  time.sleep(0.5)
   return cNode
 
 def lookup(cNode, keyId):
-  target=cNode.find_successor(keyId)
+  target, steps=cNode.count_step(keyId)
   if target:
-    return target.id()
+    return target.id(), steps
   return False
 
 if __name__=="__main__":
   ip=sys.argv[1]
-  ports=range(10020, 10040)
+  ports=range(PORT_FROM, PORT_TO)
 
   #choose the random address from existing nodes
   remoteAddr=sys.argv[2]
@@ -44,26 +45,25 @@ if __name__=="__main__":
 
   for keyId in random.sample(range(CHORD_SIZE), NQUERY):
     cNode=random.choice(cNodeList)
-    targetId=lookup(cNode, keyId)
+    targetId, steps=lookup(cNode, keyId)
     if targetId:
-      nStep[keyId]=(targetId, cNode.stepCounter.path_len[keyId])
+      nStep[(cNode.id(), keyId)]=(targetId, steps)
     else:
-      nStep[keyId]=(False, False)
+      nStep[(cNode.id(), keyId)]=(False, False)
 
   #write the lookup results to the disk
-  folder='/home/ddps2012/result'
-  # folder='d:/dps/a2/DPS-2/result'
+  # folder='/home/ddps2012/result'
+  folder='d:/dps/a2/result'
   filename='e1_'+str(LOGSIZE)+'_'+str(cNodeList[0].id())+'.txt'
 
   with open(os.path.join(folder, filename), 'w+') as f:
-    f.write('\t'.join(['keyId', 'targetId', 'steps']))
+    f.write('\t'.join(['fromId','keyId', 'targetId', 'steps']))
     f.write('\n')
-    for keyId, vs in nStep.items():
-      f.write('\t'.join([str(keyId), str(vs[0]), str(vs[1])]))
+    for ks, vs in nStep.items():
+      f.write('\t'.join([str(ks[0]), str(ks[1]), str(vs[0]), str(vs[1])]))
       f.write('\n')
 
   #shutdown all running nodes
   time.sleep(30)
   for cNode in cNodeList:
     cNode.shutdown()
-

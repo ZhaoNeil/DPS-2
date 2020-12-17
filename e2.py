@@ -7,21 +7,22 @@ import os
 
 
 def create_cNode(port, rNodeAddr):
-  cNode=NodeServer(ip, ports[i], count_timeout=True)
+  cNode=NodeServer(ip, ports[i])
   cNode.join(rNodeAddr)
   cNode.start()
   print("Created at id=%d" % (cNode.id()))
+  time.sleep(0.5)
   return cNode
 
 def lookup(cNode, keyId):
-  target=cNode.find_successor(keyId)
+  target, timeouts=cNode.count_timeout(keyId)
   if target:
-    return target.id()
+    return target.id(), timeouts
   return False
 
 if __name__=="__main__":
   ip=sys.argv[1]
-  ports=range(10020, 10040)
+  ports=range(PORT_FROM, PORT_TO)
 
   #choose the random address from existing nodes
   remoteAddr=sys.argv[2]
@@ -54,8 +55,8 @@ if __name__=="__main__":
       failedId.append(cNode.id())
 
   #write failed node ids to the disk
-  folder='/home/ddps2012/result'
-  # folder='d:/dps/a2/DPS-2/result'
+  # folder='/home/ddps2012/result'
+  folder='d:/dps/a2/result'
   failed_file='failed_'+str(FAIL_PROB)+'_'+str(cNodeList[0].id())+'.txt'
   if len(failedId)>0:
     with open(os.path.join(folder, failed_file), 'w+') as f:
@@ -74,26 +75,26 @@ if __name__=="__main__":
       cNode=random.choice(cNodeList)
       if cNode.id() not in failedId:
         break
-    targetId=lookup(cNode, keyId)
+    targetId, timeouts=lookup(cNode, keyId)
     if targetId:
-      nTimeout[keyId]=(targetId, cNode.timeoutCounter.get_nTimeout(keyId))
+      nTimeout[(cNode.id(), keyId)]=(targetId, timeouts)
     else:
-      nTimeout[keyId]=(False, False)
+      nTimeout[(cNode.id(), keyId)]=(False, False)
 
   #write lookup results to the disk
   # folder='/home/ddps2012/result'
-  folder='d:/dps/a2/DPS-2/result'
+  folder='d:/dps/a2/result'
   timeout_file='e2_'+str(FAIL_PROB)+'_'+str(cNodeList[0].id())+'.txt'
 
   with open(os.path.join(folder, timeout_file), 'w+') as f:
-    f.write('\t'.join(['keyId', 'targetId', 'timeout']))
+    f.write('\t'.join(['fromId', 'keyId', 'targetId', 'timeout']))
     f.write('\n')
-    for keyId, vs in nTimeout.items():
-      f.write('\t'.join([str(keyId), str(vs[0]), str(vs[1])]))
+    for ks, vs in nTimeout.items():
+      f.write('\t'.join([str(ks[0]), str(ks[1]), str(vs[0]), str(vs[1])]))
       f.write('\n')
 
   #shutdown all running nodes
-  time.sleep(30)
+  # time.sleep(30)
   for cNode in cNodeList:
     if cNode.id() not in failedId:
       cNode.shutdown()
