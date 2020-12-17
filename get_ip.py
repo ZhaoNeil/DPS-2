@@ -8,3 +8,4 @@ def get_host_ip():
   finally:
       s.close()
       return ip
+

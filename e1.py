@@ -5,7 +5,7 @@ import os
 import random
 
 def create_cNode(port, rNodeAddr):
-  cNode=NodeServer(local, ports[i], count_steps=True)
+  cNode=NodeServer(ip, ports[i], count_steps=True)
   cNode.join(rNodeAddr)
   cNode.start()
   print("Created at id=%d" % (cNode.id()))
@@ -19,9 +19,9 @@ def lookup(cNode, keyId):
   return False
 
 if __name__=="__main__":
-  local='127.0.0.1'
-  ports=range(10001, 10021)
-  remoteAddr=sys.argv[1]
+  ip=sys.argv[1]
+  ports=range(10020, 10040)
+  remoteAddr=sys.argv[2]
   if remoteAddr=='None':
     remoteAddr=None
   else:
@@ -33,7 +33,7 @@ if __name__=="__main__":
       rNodeAddr=remoteAddr
     else:
       rNodeAddr=random.choice(cNodeList).addr
-    cNodeList.append(ports[i], rNodeAddr)
+    cNodeList.append(create_cNode(ports[i], rNodeAddr))
 
   time.sleep(30)
 
@@ -42,18 +42,18 @@ if __name__=="__main__":
   for keyId in random.sample(range(CHORD_SIZE), NQUERY):
     cNode=random.choice(cNodeList)
     if lookup(cNode, keyId):
-      nStep[keyId]=cNode.stepCounter.path_len(keyId)
+      nStep[keyId]=cNode.stepCounter.path_len[keyId]
     else:
       nStep[keyId]=False
 
-  folder='~/DPS-2/e1_'+str(LOGSIZE)
-  filename='~/DPS-2/e1_'+str(LOGSIZE)+'.txt'
+  filename='/home/ddps2012/e1_'+str(LOGSIZE)+'.txt'
 
-  with open(os.path.join(folder, filename), 'w+') as f:
+  with open(filename, 'w+') as f:
     for keyId, length in nStep.items():
       f.write(str(keyId)+'\t'+str(length))
       f.write('\n')
 
   time.sleep(30)
-  cNode.shutdown()
+  for cNode on cNodeList:
+    cNode.shutdown()
 
