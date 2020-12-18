@@ -131,20 +131,20 @@ class NodeServer:
 
   def shutdown(self):
     self.shutdown_=True
-    self.socket_.shutdown(socket.SHUT_RDWR)
+    # self.socket_.shutdown(socket.SHUT_RDWR)
     self.socket_.close()
 
   def ping(self):
     return True
 
   def id(self, offset=0):
-    return (get_hash(self.addr)+offset)%CHORD_SIZE
+    return (get_hash(self.addr)+offset)%SIZE
 
   def join(self, rNodeAddr=None):
     '''
     join a chord ring containing node n_
     '''
-    self.finger=list(map(lambda x: None, range(LOGSIZE)))
+    self.finger=list(map(lambda x: None, range(M)))
     self.pred=None
     if rNodeAddr:  # join a chord ring containing node n_
       client=Client(rNodeAddr)
@@ -249,24 +249,13 @@ class NodeServer:
       not self.predecessor().ping():
       self.pred=n_
 
-  # @repeat_and_sleep(FIX_FINGERS_INT)
-  # def fix_fingers(self):
-  #   '''
-  #   periodically refresh finger table entries
-  #   '''
-  #   if self.next>=LOGSIZE:
-  #     self.next=0
-  #   keyId=(self.id()+2**self.next)%(2**LOGSIZE)
-  #   self.finger[self.next]=self.find_successor(keyId)
-  #   self.next+=1
-  #   # return True
 
   @repeat_and_sleep(FIX_FINGERS_INT)
   def fix_fingers(self):
     '''
     randomly select an entry in finger and update its value
     '''
-    i=random.randrange(LOGSIZE-1)+1
+    i=random.randrange(M-1)+1
     self.finger[i]=self.find_successor(self.id(1<<i))
     return True
   
@@ -298,7 +287,7 @@ class NodeServer:
     return self.pred
   
   def get_succList(self):
-    return self.succList[:NSUCCESSORS-1]
+    return self.succList[:NSUCCESSOR-1]
 
   # def check_predecessor(self):
   #   if self.predecessor failed:

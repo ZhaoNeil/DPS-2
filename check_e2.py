@@ -51,9 +51,10 @@ def get_true_id(keyId, nodeIds, failedId):
 
 # %%
 if __name__ == "__main__":
-  folder='/home/ddps2012/result'
-  #folder='d:/dps/a2/result'
+  # folder='/home/ddps2012/result'
+  folder='d:/dps/a2/result'
   prob=float(sys.argv[1])
+  # prob=0.2
   result=read_result(prob)
   nodeIds=sorted(get_node_ids(prob))
   failedId=get_failed_ids(prob)
@@ -66,10 +67,12 @@ if __name__ == "__main__":
       print(False)
 
   if len(mistakes)>0:
-    file=os.path.join(folder, 'mis_e2+'+str(prob)+'.txt')
+    file=os.path.join(folder, 'mis_e2_'+str(prob)+'.txt')
     with open(file, 'w+') as f:
       f.write('\t'.join(['keyId', 'trueId', 'targetId']))
       f.write('\n')
       for m in mistakes:
         f.write('\t'.join([str(v) for v in m]))
         f.write('\n')
+
+# %%

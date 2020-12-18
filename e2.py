@@ -70,7 +70,7 @@ if __name__=="__main__":
   
   #perform lookups
   nTimeout={}
-  for keyId in random.sample(range(CHORD_SIZE), NQUERY):
+  for keyId in random.sample(range(SIZE), NQUERY):
     while 1:
       cNode=random.choice(cNodeList)
       if cNode.id() not in failedId:

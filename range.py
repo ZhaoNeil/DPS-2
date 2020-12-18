@@ -3,9 +3,9 @@ def keyInrange(key, a, b):
   '''
   is key in [a, b)?
   '''
-  a=a%CHORD_SIZE
-  b=b%CHORD_SIZE
-  key=key%CHORD_SIZE
+  a=a%SIZE
+  b=b%SIZE
+  key=key%SIZE
   if a<b:
     return a<=key and key<b
   else:

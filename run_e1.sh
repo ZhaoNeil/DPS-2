@@ -10,10 +10,10 @@ do
     ips+=($var2)
   } done
 
-var3=$(grep -E 'LOGSIZE=' /home/ddps2012/DPS-2/conf.py)
-logsize=$(echo $var3 | grep -P '\d+' -o)
+var3=$(grep -E 'NNODE=' /home/ddps2012/DPS-2/conf.py)
+NNODE=$(echo $var3 | grep -P '\d+' -o)
 
-file='ips_e1_'$logsize'.txt'
+file='ips_e1_'$NNODE'.txt'
 
 printf "%s\n" "${ips[@]}" > /home/ddps2012/result/$file
 

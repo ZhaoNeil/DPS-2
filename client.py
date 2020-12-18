@@ -49,7 +49,7 @@ class Client:
       return False
 
   def id(self, offset=0):
-    return (get_hash(self.addr)+offset)%CHORD_SIZE
+    return (get_hash(self.addr)+offset)%SIZE
 
   @requires_connection
   def successor(self):

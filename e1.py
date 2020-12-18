@@ -38,13 +38,13 @@ if __name__=="__main__":
     cNodeList.append(create_cNode(ports[i], rNodeAddr))
 
   print('Creating nodes done')
-  time.sleep(120)
+  time.sleep(60)
 
   #perfrom lookups
   print("Lookup begins")
   nStep={}
 
-  for keyId in random.sample(range(CHORD_SIZE), NQUERY):
+  for keyId in random.sample(range(SIZE), NQUERY):
     cNode=random.choice(cNodeList)
     targetId, steps=lookup(cNode, keyId)
     if targetId:
@@ -54,9 +54,9 @@ if __name__=="__main__":
   print("Lookup done")
 
   #write the lookup results to the disk
-  folder='/home/ddps2012/result'
-  #folder='d:/dps/a2/result'
-  filename='e1_'+str(LOGSIZE)+'_'+str(cNodeList[0].id())+'.txt'
+  # folder='/home/ddps2012/result'
+  folder='d:/dps/a2/result'
+  filename='e1_'+str(NNODE)+'_'+str(cNodeList[0].id())+'.txt'
 
   with open(os.path.join(folder, filename), 'w+') as f:
     f.write('\t'.join(['fromId','keyId', 'targetId', 'steps']))
