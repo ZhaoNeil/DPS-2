@@ -19,15 +19,15 @@ def read_result(logsize):
   return result
 
 def get_node_ids(logsize):
-  nodeIds=[]
+  nodeIds=set()
   ports=range(PORT_FROM, PORT_TO)
   file=os.path.join(folder, 'ips_e1_'+str(logsize)+'.txt')
   with open(file, 'r') as f:
     for line in f:
       ip=line.strip()
       for port in ports:
-        nodeIds.append(get_hash((ip, port)))
-  return nodeIds
+        nodeIds.add(get_hash((ip, port)))
+  return list(nodeIds)
 
 def get_true_id(keyId, nodeIds):
   for i in range(len(nodeIds)): 
@@ -45,19 +45,19 @@ if __name__ == "__main__":
   logsize=int(sys.argv[1])
   result=read_result(logsize)
   nodeIds=sorted(get_node_ids(logsize))
-  print(len(nodeIds))
+  print(nodeIds)
   mistakes=[]
   for r in result:
     keyId, targetId=r[1], r[2]
     trueId=get_true_id(keyId, nodeIds)
     if trueId!=targetId:
-      mistakes.append([keyId, trueId, targetId])
+      mistakes.append([r[0], keyId, trueId, targetId])
       print(False)
 
   if len(mistakes)>0:
     file=os.path.join(folder, 'mis_e1_'+str(logsize)+'.txt')
     with open(file, 'w+') as f:
-      f.write('\t'.join(['keyId', 'trueId', 'targetId']))
+      f.write('\t'.join(['fromId','keyId', 'trueId', 'targetId']))
       f.write('\n')
       for m in mistakes:
         f.write('\t'.join([str(v) for v in m]))

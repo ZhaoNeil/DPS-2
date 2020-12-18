@@ -59,7 +59,6 @@ class NodeServer:
     threading.Thread(target=self.listen_thread, args=()).start()
     threading.Thread(target=self.stabilize, args=()).start()
     threading.Thread(target=self.fix_fingers, args=()).start()
-    threading.Thread(target=self.update_successor_list, args=()).start()
 
   def listen_thread(self):
     '''
@@ -132,9 +131,8 @@ class NodeServer:
 
   def shutdown(self):
     self.shutdown_=True
-    # self.socket_.shutdown(1)
+    self.socket_.shutdown(socket.SHUT_RDWR)
     self.socket_.close()
-    print('shutdown')
 
   def ping(self):
     return True
@@ -173,6 +171,7 @@ class NodeServer:
       n_=self.closet_preceding_finger(keyId)
       return n_.find_successor(keyId)
 
+  @retry_on_socket_error(COUNT_STEP_RET)
   def count_step(self, keyId):
     if self.predecessor() and keyInrange(keyId, self.predecessor().id(1), self.id(1)):
       return (self, 1)
@@ -183,6 +182,7 @@ class NodeServer:
       target, steps=n_.count_step(keyId)
       return (target, steps+1)
 
+  @retry_on_socket_error(COUNT_TIMEOUT_RET)
   def count_timeout(self, keyId):
     failed=set()
     #check if the target is myself
@@ -234,6 +234,7 @@ class NodeServer:
     if x!=None and keyInrange(x.id(), self.id(1), self.finger[0].id(1)) and x.ping():
       self.finger[0]=x
     self.successor().notify(self)
+    self.update_successor_list()
     return True
 
   def notify(self, n_):
@@ -269,8 +270,6 @@ class NodeServer:
     self.finger[i]=self.find_successor(self.id(1<<i))
     return True
   
-  @repeat_and_sleep(UPDATE_SUCCESSORS_INT)
-  @retry_on_socket_error(UPDATE_SUCCESSORS_RET)
   def update_successor_list(self):
     '''
     update n' succList with succ and succ's successor list

@@ -8,8 +8,7 @@ def create_cNode(port, rNodeAddr):
   cNode=NodeServer(ip, ports[i])
   cNode.join(rNodeAddr)
   cNode.start()
-  print("Created at id=%d" % (cNode.id()))
-  time.sleep(0.2)
+  #time.sleep(0.1)
   return cNode
 
 def lookup(cNode, keyId):
@@ -38,7 +37,8 @@ if __name__=="__main__":
       rNodeAddr=random.choice(cNodeList).addr
     cNodeList.append(create_cNode(ports[i], rNodeAddr))
 
-  time.sleep(45)
+  print('Creating nodes done')
+  time.sleep(120)
 
   #perfrom lookups
   print("Lookup begins")
@@ -51,7 +51,7 @@ if __name__=="__main__":
       nStep[(cNode.id(), keyId)]=(targetId, steps)
     else:
       nStep[(cNode.id(), keyId)]=(False, False)
-  print("Lookup finished")
+  print("Lookup done")
 
   #write the lookup results to the disk
   folder='/home/ddps2012/result'
@@ -66,6 +66,8 @@ if __name__=="__main__":
       f.write('\n')
 
   #shutdown all running nodes
-  time.sleep(30)
+  time.sleep(60)
+
   for cNode in cNodeList:
     cNode.shutdown()
+  print('end')

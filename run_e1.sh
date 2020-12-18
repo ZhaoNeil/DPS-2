@@ -25,7 +25,7 @@ do
     then
 	rNodeAddr='None'
     else
-	rNodeAddr=${ips[0]}':10010'
+	rNodeAddr=${ips[0]}':10021'
     fi
     ssh ${ips[$i]} python3 -u ~/DPS-2/e1.py ${ips[$i]} $rNodeAddr
 }&
