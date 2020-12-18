@@ -38,7 +38,7 @@ if __name__=="__main__":
     cNodeList.append(create_cNode(ports[i], rNodeAddr))
 
   print('Creating nodes done')
-  time.sleep(60)
+  time.sleep(480)
 
   #perfrom lookups
   print("Lookup begins")
@@ -54,8 +54,8 @@ if __name__=="__main__":
   print("Lookup done")
 
   #write the lookup results to the disk
-  # folder='/home/ddps2012/result'
-  folder='d:/dps/a2/result'
+  folder='/home/ddps2012/DPS-2/result'
+  #folder='d:/dps/a2/result'
   filename='e1_'+str(NNODE)+'_'+str(cNodeList[0].id())+'.txt'
 
   with open(os.path.join(folder, filename), 'w+') as f:
@@ -66,8 +66,11 @@ if __name__=="__main__":
       f.write('\n')
 
   #shutdown all running nodes
-  time.sleep(60)
-
+  time.sleep(100)
+  for cNode in cNodeList:
+    cNode.stopFixing=True
+  
+  time.sleep(20)
   for cNode in cNodeList:
     cNode.shutdown()
   print('end')

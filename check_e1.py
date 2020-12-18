@@ -19,15 +19,15 @@ def read_result(nnode):
   return result
 
 def get_node_ids(nnode):
-  nodeIds=set()
+  nodeIds=[]
   ports=range(PORT_FROM, PORT_TO)
   file=os.path.join(folder, 'ips_e1_'+str(nnode)+'.txt')
   with open(file, 'r') as f:
     for line in f:
       ip=line.strip()
       for port in ports:
-        nodeIds.add(get_hash((ip, port)))
-  return list(nodeIds)
+        nodeIds.append(get_hash((ip, port)))
+  return nodeIds
 
 def get_true_id(keyId, nodeIds):
   for i in range(len(nodeIds)): 
@@ -40,11 +40,12 @@ def get_true_id(keyId, nodeIds):
 
 # %%
 if __name__ == "__main__":
-  # folder='/home/ddps2012/result'
-  folder='d:/dps/a2/result'
+  folder='/home/ddps2012/DPS-2/result'
+  #folder='d:/dps/a2/result'
   nnode=int(sys.argv[1])
   result=read_result(nnode)
   nodeIds=sorted(get_node_ids(nnode))
+  print(len(nodeIds))
   mistakes=[]
   for r in result:
     keyId, targetId=r[1], r[2]

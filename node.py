@@ -131,7 +131,7 @@ class NodeServer:
 
   def shutdown(self):
     self.shutdown_=True
-    # self.socket_.shutdown(socket.SHUT_RDWR)
+    self.socket_.shutdown(socket.SHUT_RDWR)
     self.socket_.close()
 
   def ping(self):

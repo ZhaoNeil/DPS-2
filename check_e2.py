@@ -51,13 +51,14 @@ def get_true_id(keyId, nodeIds, failedId):
 
 # %%
 if __name__ == "__main__":
-  # folder='/home/ddps2012/result'
-  folder='d:/dps/a2/result'
+  folder='/home/ddps2012/DPS-2/result'
+  #folder='d:/dps/a2/result'
   prob=float(sys.argv[1])
   # prob=0.2
   result=read_result(prob)
   nodeIds=sorted(get_node_ids(prob))
   failedId=get_failed_ids(prob)
+  print(failedId)
   mistakes=[]
   for r in result:
     keyId, targetId=r[1], r[2]

@@ -15,17 +15,17 @@ prob=$(echo $var3 | grep -P '\d.\d' -o)
 
 file='ips_e2_'$prob'.txt'
 
-printf "%s\n" "${ips[@]}" > /home/ddps2012/result/$file
+printf "%s\n" "${ips[@]}" > /home/ddps2012/DPS-2/result/$file
 
 for i in ${!ips[@]}
 do
 {
-    sleep $(($i*3))
+    sleep $(($i*1))
     if [ $i -eq 0 ]
     then
 	rNodeAddr='None'
     else
-	rNodeAddr=${ips[0]}':10020'
+	rNodeAddr=${ips[0]}':10100'
     fi
     ssh ${ips[$i]} python3 -u ~/DPS-2/e2.py ${ips[$i]} $rNodeAddr
 }&

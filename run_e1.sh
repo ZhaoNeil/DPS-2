@@ -15,7 +15,7 @@ NNODE=$(echo $var3 | grep -P '\d+' -o)
 
 file='ips_e1_'$NNODE'.txt'
 
-printf "%s\n" "${ips[@]}" > /home/ddps2012/result/$file
+printf "%s\n" "${ips[@]}" > /home/ddps2012/DPS-2/result/$file
 
 for i in ${!ips[@]}
 do
@@ -25,7 +25,7 @@ do
     then
 	rNodeAddr='None'
     else
-	rNodeAddr=${ips[0]}':10021'
+	rNodeAddr=${ips[0]}':10100'
     fi
     ssh ${ips[$i]} python3 -u ~/DPS-2/e1.py ${ips[$i]} $rNodeAddr
 }&

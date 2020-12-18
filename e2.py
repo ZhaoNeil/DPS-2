@@ -10,8 +10,8 @@ def create_cNode(port, rNodeAddr):
   cNode=NodeServer(ip, ports[i])
   cNode.join(rNodeAddr)
   cNode.start()
-  print("Created at id=%d" % (cNode.id()))
-  time.sleep(0.25)
+  #print("Created at id=%d" % (cNode.id()))
+  #time.sleep(0.25)
   return cNode
 
 def lookup(cNode, keyId):
@@ -39,13 +39,15 @@ if __name__=="__main__":
     else:
       rNodeAddr=random.choice(cNodeList).addr
     cNodeList.append(create_cNode(ports[i], rNodeAddr))
-
-  time.sleep(30)
+  
+  print("Creating nodes done")
+  time.sleep(480)
 
   #stop stabilizing and fixing finger tables
   for cNode in cNodeList:
     cNode.stopFixing=True
-  time.sleep(5)
+  print("stop fixing done")
+  time.sleep(90)
 
   #each node fails with a certain probability
   failedId=[]
@@ -55,7 +57,7 @@ if __name__=="__main__":
       failedId.append(cNode.id())
 
   #write failed node ids to the disk
-  folder='/home/ddps2012/result'
+  folder='/home/ddps2012/DPS-2/result'
   #folder='d:/dps/a2/result'
   failed_file='failed_'+str(FAIL_PROB)+'_'+str(cNodeList[0].id())+'.txt'
   if len(failedId)>0:
@@ -68,7 +70,11 @@ if __name__=="__main__":
   if len(failedId)==len(cNodeList):
     sys.exit()
   
-  #perform lookups
+  print('shutdown done')
+  time.sleep(100)
+
+  #perform lookups 
+  print("Lookup begins")
   nTimeout={}
   for keyId in random.sample(range(SIZE), NQUERY):
     while 1:
@@ -82,8 +88,8 @@ if __name__=="__main__":
       nTimeout[(cNode.id(), keyId)]=(False, False)
 
   #write lookup results to the disk
-  # folder='/home/ddps2012/result'
-  folder='d:/dps/a2/result'
+  folder='/home/ddps2012/DPS-2/result'
+  #folder='d:/dps/a2/result'
   timeout_file='e2_'+str(FAIL_PROB)+'_'+str(cNodeList[0].id())+'.txt'
 
   with open(os.path.join(folder, timeout_file), 'w+') as f:
@@ -93,11 +99,12 @@ if __name__=="__main__":
       f.write('\t'.join([str(ks[0]), str(ks[1]), str(vs[0]), str(vs[1])]))
       f.write('\n')
 
+  print("Lookup done")
   #shutdown all running nodes
-  # time.sleep(30)
+  time.sleep(100)
   for cNode in cNodeList:
     if cNode.id() not in failedId:
       cNode.shutdown()
-
+  print('end')
   # %%
 # %%
